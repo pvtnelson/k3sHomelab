@@ -33,4 +33,5 @@ spec:
       admin:
         existingSecret: grafana-container-env
         userKey: GF_SECURITY_ADMIN_USER
-        passwordKey: GF_SECURITY_ADMIN_PASSWOR
+        passwordKey: GF_SECURITY_ADMIN_PASSWORD
+
