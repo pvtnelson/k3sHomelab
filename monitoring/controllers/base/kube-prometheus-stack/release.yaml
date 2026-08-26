@@ -30,5 +30,4 @@ spec:
           kind: PrometheusRule
   values:
     grafana:
-      adminPassword: Wolverine7-Scribe-Shirt
-
+      envFromSecret: grafana-container-env
