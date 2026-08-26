@@ -1,7 +1,8 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: grafana
+  name: kube-prometheus-stack-grafana 
+  namespace: monitoring
 spec:
   ingressClassName: traefik
   rules:
