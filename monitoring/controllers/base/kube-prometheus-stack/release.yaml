@@ -34,12 +34,12 @@ spec:
         existingSecret: grafana-container-env
         userKey: GF_SECURITY_ADMIN_USER
         passwordKey: GF_SECURITY_ADMIN_PASSWORD
-    ingress:
-      enabled: true
-      ingressClassName: traefik
-      hosts:
-        - grafana.vandesteeg.dev
-      path: /
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        hosts:
+          - grafana.vandesteeg.dev
+        path: /
     #  tls: []
     #    - secretName: grafana-general-tls
     #   hosts:
