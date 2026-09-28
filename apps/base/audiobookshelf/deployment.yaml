@@ -13,9 +13,12 @@ spec:
         app: audiobookshelf
     spec:
       securityContext:
+        runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
 
       containers:
         - name: audiobookshelf
@@ -28,6 +31,9 @@ spec:
 
           securityContext:
             allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
 
           volumeMounts:
             - name: audiobookshelf-config
