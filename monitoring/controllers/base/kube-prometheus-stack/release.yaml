@@ -37,10 +37,12 @@ spec:
       ingress:
         enabled: true
         ingressClassName: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-production
         hosts:
           - grafana.vandesteeg.dev
         path: /
-    #  tls: []
-    #    - secretName: grafana-general-tls
-    #   hosts:
-    #   - grafana.example.com
+        tls:
+          - secretName: grafana-tls
+            hosts:
+              - grafana.vandesteeg.dev
