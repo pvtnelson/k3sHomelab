@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homepage
+data:
+  kubernetes.yaml: |
+    mode: cluster
+  settings.yaml: |
+    title: Homelab
+    favicon: https://raw.githubusercontent.com/gethomepage/homepage/main/public/homepage.png
+    headerStyle: clean
+    layout:
+      Apps:
+        style: row
+        columns: 3
+      Infrastructure:
+        style: row
+        columns: 3
+      Bookmarks:
+        style: row
+        columns: 3
+  bookmarks.yaml: |
+    - Bookmarks:
+        - GitHub:
+            - abbr: GH
+              href: https://github.com/pvtnelson/k3sHomelab
+        - Flux Docs:
+            - abbr: FX
+              href: https://fluxcd.io/docs/
+  services.yaml: |
+    - Apps:
+        - Linkding:
+            icon: linkding.png
+            href: https://linkding.vandesteeg.dev
+            description: Bookmark manager
+        - Audiobookshelf:
+            icon: audiobookshelf.png
+            href: https://audiobookshelf.vandesteeg.dev
+            description: Audiobook library
+    - Infrastructure:
+        - Grafana:
+            icon: grafana.png
+            href: https://grafana.vandesteeg.dev
+            description: Monitoring dashboards
+  widgets.yaml: |
+    - kubernetes:
+        cluster:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+          label: "homelab"
+        nodes:
+          show: true
+          cpu: true
+          memory: true
+          showLabel: true
+    - search:
+        provider: duckduckgo
+        target: _blank
+  docker.yaml: ""
+  custom.js: ""
+  custom.css: ""
