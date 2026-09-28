@@ -54,8 +54,9 @@ This project manages a **k3s homelab** environment using **GitOps** principles. 
 1. Create a new directory in `apps/homelab/<app-name>`.
 2. Define the `kustomization.yaml` and necessary resource manifests.
 3. If secrets are needed, create them using SOPS. **Never store plaintext passwords.**
-4. Configure Cloudflare Tunnel for public access if required (e.g., Stage 3 of Audiobookshelf).
-5. Ensure the application is referenced in the main `apps.yaml` or relevant Kustomization.
+4. Configure Cloudflare Tunnel for public access if required.
+5. For shared credentials, reference `../shared/admin-secret.yaml` from the app's kustomization.
+6. Ensure the application is referenced in the main `apps.yaml` or relevant Kustomization.
 
 ### Updating an Existing Application
 1. Modify the YAML files in `apps/homelab/<app-name>`.
@@ -81,12 +82,27 @@ This project manages a **k3s homelab** environment using **GitOps** principles. 
 - **Security:** Non-root (UID 33, www-data)
 
 ### Audiobookshelf
-- **Access:** Internal only (ClusterIP)
+- **Access:** Internal only (Traefik Ingress, `audiobookshelf.vandesteeg.dev`)
 - **Port:** 3005 (configured via ConfigMap)
 - **Storage:** 3 PVCs — data (10Gi), metadata (2Gi), config (1Gi)
 - **Security:** Non-root (UID/GID 1000, node user), privilege escalation disabled
 
-## 10. Architecture Decisions
-- **Public vs Internal:** Not all applications require public access. Use Cloudflare Tunnels only when explicitly needed. Default to ClusterIP (internal only).
-- **README:** The README is public-facing. Do not expose internal details such as ports, UIDs, storage sizes, or infrastructure specifics.
+### Monitoring (kube-prometheus-stack)
+- **Components:** Prometheus, Grafana
+- **Grafana Access:** Traefik Ingress (`grafana.vandesteeg.dev`)
+- **Grafana Credentials:** SOPS-encrypted secret (`grafana-container-env`)
+- **Namespace:** `monitoring`
+- **Deployed via:** HelmRelease (Flux HelmController)
+
+## 10. Shared Resources
+- **Admin Secret:** `apps/homelab/shared/admin-secret.yaml` — SOPS-encrypted shared admin credentials.
+- Referenced by each app's `kustomization.yaml` via `- ../shared/admin-secret.yaml`.
+- Kustomize applies the correct namespace per app automatically.
+- To add to a new app, add the resource reference to that app's `kustomization.yaml`.
+
+## 11. Architecture Decisions
+- **Public vs Internal:** Not all applications require public access. Use Cloudflare Tunnels only when explicitly needed. Default to internal access via Traefik Ingress.
+- **Ingress:** Traefik (k3s default) is used for local network access. Cloudflare Tunnels are used only for public-facing services.
+- **Shared Secrets:** A single SOPS-encrypted admin secret is stored in `apps/homelab/shared/` and referenced by each app that needs it. Kubernetes deploys a namespace-scoped copy per app.
+- **README:** The README is public-facing. Do not expose internal details such as ports, UIDs, storage sizes, hostnames, or infrastructure specifics.
 
