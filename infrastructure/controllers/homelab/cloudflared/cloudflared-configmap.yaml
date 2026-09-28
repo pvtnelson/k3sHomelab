@@ -13,4 +13,6 @@ data:
     ingress:
       - hostname: linkding.vandesteeg.dev
         service: http://linkding.linkding.svc.cluster.local:9090
+      - hostname: vandesteeg.dev
+        service: http://website.website.svc.cluster.local:8080
       - service: http_status:404
