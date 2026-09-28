@@ -2,8 +2,14 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: audiobookshelf
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - audiobookshelf.vandesteeg.dev
+      secretName: audiobookshelf-tls
   rules:
     - host: audiobookshelf.vandesteeg.dev
       http:
