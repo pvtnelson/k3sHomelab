@@ -1,3 +1,6 @@
+# Continue IDE rules (internal documentation)
+.continue/
+
 # Local .terraform directories
 .terraform/
 
