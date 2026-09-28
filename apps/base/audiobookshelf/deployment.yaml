@@ -31,11 +31,11 @@ spec:
 
           volumeMounts:
             - name: audiobookshelf-config
-              mountPath: /app/config
+              mountPath: /config
             - name: audiobookshelf-data
-              mountPath: /app/data
+              mountPath: /audiobooks
             - name: audiobookshelf-metadata
-              mountPath: /app/metadata
+              mountPath: /metadata
       volumes:
         - name: audiobookshelf-config
           persistentVolumeClaim:
