@@ -1,12 +1,13 @@
 # k3sHomelab
 Running my k3s homelab maintained via GitOps
 
-## Setup 
-3 node k3s cluster 
-fluxCD
+## Setup
+- k3s cluster
+- FluxCD
+- Kustomize
+- SOPS
 
-## Applications running
+## Applications
 - Linkding
+- Audiobookshelf
 
-
- 
