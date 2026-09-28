@@ -11,6 +11,9 @@ Running my k3s homelab maintained via GitOps
 - Linkding
 - Audiobookshelf
 
+## Infrastructure
+- cert-manager (TLS certificates via Let's Encrypt)
+
 ## Monitoring
 - Prometheus
 - Grafana
