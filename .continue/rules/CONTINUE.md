@@ -35,6 +35,9 @@ This project manages a **k3s homelab** environment using **GitOps** principles. 
     - `homelab/`: Environment-specific overrides for the homelab cluster (e.g., `linkding`, `audiobookshelf`).
 - `clusters/`: Cluster-specific configuration files.
     - `homelab/`: Configuration specifically for the homelab k3s cluster, including Flux Kustomizations (`apps.yaml`, `monitoring.yaml`) and SOPS-encrypted secrets.
+- `infrastructure/`: Cluster-wide infrastructure services (e.g., cert-manager).
+    - `controllers/base/`: Base HelmRelease and repository definitions.
+    - `controllers/homelab/`: Environment-specific overrides (ClusterIssuers, SOPS-encrypted secrets).
 - `monitoring/`: Configuration for monitoring tools (e.g., Prometheus, Grafana).
 - `scripts/`: Utility scripts for automation and maintenance.
 
@@ -86,6 +89,14 @@ This project manages a **k3s homelab** environment using **GitOps** principles. 
 - **Port:** 3005 (configured via ConfigMap)
 - **Storage:** 3 PVCs — data (10Gi), metadata (2Gi), config (1Gi)
 - **Security:** Non-root (UID/GID 1000, node user), privilege escalation disabled
+
+### Infrastructure: cert-manager
+- **Purpose:** Automated TLS certificate management via Let's Encrypt
+- **Challenge Type:** DNS-01 via Cloudflare API token (SOPS-encrypted)
+- **ClusterIssuer:** `letsencrypt-production`
+- **Namespace:** `cert-manager`
+- **Deployed via:** HelmRelease (Flux HelmController)
+- **Usage:** Add `cert-manager.io/cluster-issuer: letsencrypt-production` annotation and a `tls` block to any Ingress resource.
 
 ### Monitoring (kube-prometheus-stack)
 - **Components:** Prometheus, Grafana
