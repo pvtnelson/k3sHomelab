@@ -11,3 +11,7 @@ Running my k3s homelab maintained via GitOps
 - Linkding
 - Audiobookshelf
 
+## Monitoring
+- Prometheus
+- Grafana
+
