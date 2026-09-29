@@ -117,6 +117,15 @@ spec:
                 secretKeyRef:
                   name: admin-secret
                   key: password
+            # Dashboard chat runs the agent in this container; same workspace as the gateway.
+            - name: TERMINAL_CWD
+              value: /workspace/notes
+            - name: MESSAGING_CWD
+              value: /workspace/notes
+            - name: OBSIDIAN_VAULT_PATH
+              value: /workspace/notes
+            - name: HERMES_WRITE_SAFE_ROOT
+              value: /opt/data:/workspace/notes
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -145,6 +154,8 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /opt/data
+            - name: notes
+              mountPath: /workspace/notes
 
       volumes:
         - name: data
