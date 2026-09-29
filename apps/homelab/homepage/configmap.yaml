@@ -37,6 +37,10 @@ data:
             icon: audiobookshelf.png
             href: https://audiobookshelf.vandesteeg.dev
             description: Audiobook library
+        - Hermes:
+            icon: https://hermes-agent.nousresearch.com/favicon.ico
+            href: https://hermes.vandesteeg.dev
+            description: AI agent
     - Infrastructure:
         - Grafana:
             icon: grafana.png

@@ -1,0 +1,18 @@
+# First-boot seed for /opt/data/config.yaml. Only copied when no config exists;
+# afterwards Hermes owns the live file (it migrates/edits it), so change the
+# running config with `hermes config set` via kubectl exec.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-seed-config
+data:
+  config.yaml: |
+    # No model configured yet: pick one later in the dashboard (Settings -> Model)
+    # or with `hermes model`.
+
+    terminal:
+      backend: local
+      cwd: /workspace/notes
+
+    agent:
+      disabled_toolsets: [browser] # keeps the pod small (no Chromium / shm)
