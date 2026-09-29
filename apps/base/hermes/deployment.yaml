@@ -17,6 +17,9 @@ spec:
       labels:
         app.kubernetes.io/name: hermes
     spec:
+      # Without s6 there's no init in the containers; the pod's pause process
+      # becomes PID 1 and reaps zombie subprocesses (terminal tool, etc.).
+      shareProcessNamespace: true
       securityContext:
         runAsNonRoot: true
         runAsUser: 10000 # image's built-in `hermes` user
@@ -39,7 +42,14 @@ spec:
               # Seed our config only on first boot; Hermes owns the live copy afterwards.
               [ -f /opt/data/config.yaml ] || cp /seed/config.yaml /opt/data/config.yaml
               export PATH="/command:/package/admin/s6/command:${PATH}"
-              exec /opt/hermes/docker/stage2-hook.sh
+              # Skip stage2's Chromium lookup: it writes to /run/s6 (s6 only) and the
+              # browser toolset is disabled anyway.
+              export AGENT_BROWSER_EXECUTABLE_PATH=/nonexistent
+              /opt/hermes/docker/stage2-hook.sh
+              # stage2 runs the config migration via s6-setuidgid, which needs root
+              # and fails for us; run it directly as the hermes user instead.
+              /opt/hermes/.venv/bin/python /opt/hermes/scripts/docker_config_migrate.py \
+                || echo "[bootstrap] WARNING: config migration failed; continuing"
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
