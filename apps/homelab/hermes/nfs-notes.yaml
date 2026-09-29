@@ -1,0 +1,32 @@
+# Markdown notes share on the Asustor NAS, mounted read-write at /workspace/notes.
+# Static PV: no NFS provisioner needed, but every node needs `nfs-common`.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hermes-notes-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain # never touch the NAS data on delete
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+  nfs:
+    server: 10.10.10.10
+    path: /volume1/hermes
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes-notes-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: hermes-notes-pv
+  resources:
+    requests:
+      storage: 10Gi

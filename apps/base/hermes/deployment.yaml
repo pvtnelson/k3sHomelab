@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes
+  labels:
+    app.kubernetes.io/name: hermes
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate # RWO data volume + single Telegram poller: never run two pods
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hermes
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hermes
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10000 # image's built-in `hermes` user
+        runAsGroup: 10000
+        fsGroup: 10000
+        seccompProfile:
+          type: RuntimeDefault
+
+      # The image's s6-overlay /init expects root, so we bypass it and run the
+      # image's own bootstrap + wrapper scripts directly as the hermes user.
+      # Kubernetes takes over supervision (restarts) from s6.
+      initContainers:
+        - name: bootstrap
+          image: nousresearch/hermes-agent:v2026.9.24
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              # Seed our config only on first boot; Hermes owns the live copy afterwards.
+              [ -f /opt/data/config.yaml ] || cp /seed/config.yaml /opt/data/config.yaml
+              export PATH="/command:/package/admin/s6/command:${PATH}"
+              exec /opt/hermes/docker/stage2-hook.sh
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: seed-config
+              mountPath: /seed
+
+      containers:
+        - name: gateway
+          image: nousresearch/hermes-agent:v2026.9.24
+          command: ["/opt/hermes/docker/main-wrapper.sh"]
+          args: ["gateway", "run"]
+          envFrom:
+            - secretRef:
+                name: hermes-env
+                optional: true # API keys / Telegram, added later; pod runs without it
+          env:
+            - name: TERMINAL_CWD
+              value: /workspace/notes
+            - name: MESSAGING_CWD
+              value: /workspace/notes
+            - name: OBSIDIAN_VAULT_PATH
+              value: /workspace/notes
+            # Image default is /opt/data only; without this the agent can't write notes.
+            - name: HERMES_WRITE_SAFE_ROOT
+              value: /opt/data:/workspace/notes
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 250m
+              memory: 768Mi
+            limits:
+              memory: 1536Mi
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: notes
+              mountPath: /workspace/notes
+
+        - name: dashboard
+          image: nousresearch/hermes-agent:v2026.9.24
+          command: ["/opt/hermes/docker/main-wrapper.sh"]
+          args: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--no-open"]
+          envFrom:
+            - secretRef:
+                name: hermes-env
+                optional: true # API keys / Telegram, added later; pod runs without it
+          env:
+            # Dashboard login = shared homelab admin credentials (apps/homelab/shared)
+            - name: HERMES_DASHBOARD_BASIC_AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: admin-secret
+                  key: user
+            - name: HERMES_DASHBOARD_BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: admin-secret
+                  key: password
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: dashboard
+              containerPort: 9119
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: dashboard
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: dashboard
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hermes-data-pvc
+        - name: notes
+          persistentVolumeClaim:
+            claimName: hermes-notes-pvc # provided by the overlay (NFS)
+        - name: seed-config
+          configMap:
+            name: hermes-seed-config

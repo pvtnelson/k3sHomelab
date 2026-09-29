@@ -1,0 +1,12 @@
+# HERMES_HOME (config, memory, skills, SQLite sessions). Kept on local-path:
+# SQLite runs in WAL mode, which is not safe on NFS.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
