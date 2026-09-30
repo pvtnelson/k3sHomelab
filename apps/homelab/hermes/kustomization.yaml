@@ -7,3 +7,4 @@ resources:
   - configmap.yaml
   - ../shared/admin-secret.yaml # dashboard login
   - hermes-env-secret.yaml # SOPS: CLAUDE_CODE_OAUTH_TOKEN (+ later: model API keys, Telegram)
+  - hermes-honcho-secret.yaml # SOPS: HONCHO_API_KEY, created by scripts/shell/create-hermes-honcho-secret.sh

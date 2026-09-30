@@ -53,7 +53,7 @@ data:
     SKIP_DIRS = {
         "logs", "cache", "audio_cache", "image_cache", ".cache", "home/.cache", ".npm",
         "lazy-packages", "bin", ".cua-driver", ".local/bin", ".local/share/claude",
-        ".local/share/tirith", "multica-workspaces",
+        ".local/share/tirith", "multica-workspaces", "secrets",
     }
     SKIP_FILES = {".env", "auth.json", ".multica/config.json", ".claude/.credentials.json"}
     SKIP_SUFFIXES = (".lock", ".sock", ".pid", "-wal", "-shm")
