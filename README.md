@@ -8,16 +8,20 @@ Running my k3s homelab maintained via GitOps
 - SOPS with age encryption
 
 ## Applications
-- [Homepage](https://gethomepage.dev) — Dashboard at `home.vandesteeg.dev`
-- [Linkding](https://github.com/sissbruecker/linkding) — Bookmark manager at `linkding.vandesteeg.dev`
-- [Audiobookshelf](https://www.audiobookshelf.org) — Audiobook library at `audiobookshelf.vandesteeg.dev`
+- [Homepage](https://gethomepage.dev) — Dashboard 
+- [Linkding](https://github.com/sissbruecker/linkding) — Bookmark manager
+- [Audiobookshelf](https://www.audiobookshelf.org) — Audiobook library
 - Website — Personal site at `vandesteeg.dev`
-- [Hermes Agent](https://hermes-agent.nousresearch.com) — AI agent (Telegram + dashboard at `hermes.vandesteeg.dev`), notes on the NAS via NFS
+- [Hermes Agent](https://hermes-agent.nousresearch.com) — AI agent 
+- [Multica](https://github.com/multica-ai/multica) — Agent task board
+- [Honcho](https://github.com/plastic-labs/honcho) — Long-term memory service for Hermes
+
 
 ## Infrastructure
 - cert-manager — TLS certificates via Let's Encrypt (DNS-01 / Cloudflare)
 - Cloudflare Tunnel — Shared tunnel for public-facing services
 - Traefik — Ingress controller (k3s default)
+- Shared Postgres (pgvector) for Honcho + Multica, with nightly backups to the NAS
 
 ## Monitoring
 - Prometheus

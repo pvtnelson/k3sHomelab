@@ -1,0 +1,61 @@
+# Next.js web app; proxies API calls to the backend (REMOTE_API_URL).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multica-frontend
+  labels:
+    app.kubernetes.io/name: multica-frontend
+    app.kubernetes.io/part-of: multica
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: multica-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: multica-frontend
+        app.kubernetes.io/part-of: multica
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001 # image's built-in `nextjs` user
+        runAsGroup: 65533
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: frontend
+          image: ghcr.io/multica-ai/multica-web:v0.6.0
+          env:
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: REMOTE_API_URL
+              value: http://multica-backend:8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 25m
+              memory: 128Mi
+            limits:
+              memory: 512Mi

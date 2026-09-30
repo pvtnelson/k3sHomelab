@@ -1,0 +1,91 @@
+# Shared Postgres (pgvector) for the apps next to Hermes: one database + role
+# per app (honcho, multica), created by the init script on first boot.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes-postgres
+  labels:
+    app.kubernetes.io/name: hermes-postgres
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate # RWO data volume: never run two postgres pods on one PGDATA
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: hermes-postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: hermes-postgres
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999 # image's built-in `postgres` user
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg17
+          args: ["-c", "max_connections=200"]
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_PASSWORD
+            - name: HONCHO_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: HONCHO_DB_PASSWORD
+            - name: MULTICA_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: MULTICA_DB_PASSWORD
+            # Subdirectory: initdb refuses a mount point that isn't empty (lost+found).
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: hermes-postgres-pvc
+        - name: init
+          configMap:
+            name: hermes-postgres-init

@@ -1,0 +1,62 @@
+# Honcho API: runs DB migrations (docker/entrypoint.sh) and serves the API on 8000.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: honcho-api
+  labels:
+    app.kubernetes.io/name: honcho-api
+    app.kubernetes.io/part-of: honcho
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: honcho-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: honcho-api
+        app.kubernetes.io/part-of: honcho
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100 # image's built-in `app` user
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ghcr.io/plastic-labs/honcho:v3.2.1
+          command: ["sh", "docker/entrypoint.sh"]
+          envFrom:
+            - configMapRef:
+                name: honcho-config
+            - secretRef:
+                name: honcho-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 768Mi

@@ -1,0 +1,20 @@
+# Non-secret Multica backend settings (same names as the upstream Helm chart's configmap).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multica-config
+data:
+  PORT: "8080"
+  APP_ENV: production
+  MULTICA_APP_URL: https://multica.vandesteeg.dev
+  FRONTEND_ORIGIN: https://multica.vandesteeg.dev
+  MULTICA_PUBLIC_URL: https://multica-api.vandesteeg.dev
+  LOCAL_UPLOAD_BASE_URL: https://multica-api.vandesteeg.dev
+  # The daemon runs inside the hermes pod and talks to the backend in-cluster.
+  MULTICA_DAEMON_SERVER_URL: http://multica-backend.hermes.svc.cluster.local:8080
+  MULTICA_DATABASE_STARTUP_TIMEOUT: 3m
+  # Login codes are printed in the backend log (no Resend/SMTP configured).
+  # ALLOWED_EMAILS lives in the secret. Set ALLOW_SIGNUP to "false" after your first login.
+  ALLOW_SIGNUP: "true"
+  DISABLE_WORKSPACE_CREATION: "false"
+  DO_NOT_TRACK: "1" # no anonymous telemetry to telemetry.multica.ai

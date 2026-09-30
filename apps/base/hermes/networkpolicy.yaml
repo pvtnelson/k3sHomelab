@@ -1,0 +1,148 @@
+# Namespace-wide: deny all ingress by default, then allow only the flows below.
+# Egress stays open (LLM APIs, agent CLIs, GitHub, cert-manager).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Traefik -> Hermes dashboard
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hermes-from-traefik
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hermes
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 9119
+          protocol: TCP
+---
+# Traefik -> Multica web
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: multica-frontend-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: multica-frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - port: 3000
+          protocol: TCP
+---
+# Traefik, the Multica web app and the Multica daemon (in the hermes pod) -> Multica API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: multica-backend-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: multica-backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [multica-frontend, hermes]
+      ports:
+        - port: 8080
+          protocol: TCP
+---
+# Hermes -> Honcho API (no Ingress: cluster-internal only)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: honcho-api-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: honcho-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: hermes
+      ports:
+        - port: 8000
+          protocol: TCP
+---
+# Honcho API + deriver -> Redis
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: honcho-redis-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: honcho-redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [honcho-api, honcho-deriver]
+      ports:
+        - port: 6379
+          protocol: TCP
+---
+# Apps + nightly backup job -> shared Postgres
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hermes-postgres-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: hermes-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [honcho-api, honcho-deriver, multica-backend, hermes-backup-postgres]
+      ports:
+        - port: 5432
+          protocol: TCP

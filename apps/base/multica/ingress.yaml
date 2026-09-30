@@ -1,0 +1,48 @@
+# Internal only (LAN via Traefik). Do NOT add these hosts to the Cloudflare Tunnel.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multica-frontend
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - multica.vandesteeg.dev
+      secretName: multica-tls
+  rules:
+    - host: multica.vandesteeg.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: multica-frontend
+                port:
+                  number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multica-backend
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - multica-api.vandesteeg.dev
+      secretName: multica-api-tls
+  rules:
+    - host: multica-api.vandesteeg.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: multica-backend
+                port:
+                  number: 8080
