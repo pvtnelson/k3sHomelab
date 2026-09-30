@@ -14,7 +14,7 @@ data:
   MULTICA_DAEMON_SERVER_URL: http://multica-backend.hermes.svc.cluster.local:8080
   MULTICA_DATABASE_STARTUP_TIMEOUT: 3m
   # Login codes are printed in the backend log (no Resend/SMTP configured).
-  # ALLOWED_EMAILS lives in the secret. Set ALLOW_SIGNUP to "false" after your first login.
-  ALLOW_SIGNUP: "true"
+  # Your account exists; no new sign-ups (ALLOWED_EMAILS in the secret is a second guard).
+  ALLOW_SIGNUP: "false"
   DISABLE_WORKSPACE_CREATION: "false"
   DO_NOT_TRACK: "1" # no anonymous telemetry to telemetry.multica.ai

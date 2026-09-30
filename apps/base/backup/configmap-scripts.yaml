@@ -10,6 +10,14 @@ data:
     set -eu
     root=/backups/postgres
     day=$(date +%F)
+    # kube-router admits a new pod into the NetworkPolicy allow-list a few seconds
+    # after it starts; until then connections are refused. Wait up to 2 minutes.
+    i=0
+    until pg_isready -q -t 2; do
+      i=$((i + 1))
+      [ "$i" -lt 60 ] || { echo "[backup] postgres not reachable" >&2; exit 1; }
+      sleep 2
+    done
     tmp="$root/.$day.tmp"
     rm -rf "$tmp"
     mkdir -p "$tmp"
@@ -30,6 +38,7 @@ data:
     so no tokens end up unencrypted on the NAS.
     """
     import datetime
+    import io
     import os
     import shutil
     import sqlite3
@@ -40,9 +49,11 @@ data:
     ROOT = Path("/backups/data")
     KEEP = int(os.environ["KEEP"])
 
+    # Caches and tools Hermes / the bootstrap download again on demand: only data is kept.
     SKIP_DIRS = {
-        "logs", "cache", "audio_cache", "image_cache", ".cache", "lazy-packages",
-        ".local/bin", ".local/share/claude", "multica-workspaces",
+        "logs", "cache", "audio_cache", "image_cache", ".cache", "home/.cache", ".npm",
+        "lazy-packages", "bin", ".cua-driver", ".local/bin", ".local/share/claude",
+        ".local/share/tirith", "multica-workspaces",
     }
     SKIP_FILES = {".env", "auth.json", ".multica/config.json", ".claude/.credentials.json"}
     SKIP_SUFFIXES = (".lock", ".sock", ".pid", "-wal", "-shm")
@@ -55,7 +66,9 @@ data:
 
 
     def skipped(rel: str) -> bool:
-        return any(rel == d or rel.startswith(d + "/") for d in SKIP_DIRS)
+        return "node_modules" in rel.split("/") or any(
+            rel == d or rel.startswith(d + "/") for d in SKIP_DIRS
+        )
 
 
     # 1. SQLite: the backup API gives a consistent copy while Hermes keeps writing.
@@ -73,21 +86,47 @@ data:
 
 
     # 2. Everything else, minus live databases, caches, sockets and credentials.
-    def tar_filter(info: tarfile.TarInfo):
-        rel = info.name.removeprefix("opt-data").lstrip("/")
-        if rel and (
-            skipped(rel)
-            or rel in SKIP_FILES
-            or rel.endswith(SKIP_SUFFIXES)
-            or rel.endswith(DB_SUFFIXES)
-            or not (info.isfile() or info.isdir() or info.issym())
-        ):
-            return None
-        return info
+    # Hermes keeps running, so files can vanish or change mid-walk: each entry is
+    # added on its own and small files are read fully before their header is written.
+    def rel_of(rel_dir: str, name: str) -> str:
+        return name if rel_dir == "." else f"{rel_dir}/{name}"
+
+
+    def add_entry(tar: tarfile.TarFile, rel: str) -> None:
+        path = SRC / rel
+        try:
+            info = tar.gettarinfo(path, arcname=f"opt-data/{rel}" if rel else "opt-data")
+            if info is None or not (info.isfile() or info.isdir() or info.issym()):
+                return  # sockets, fifos
+            if info.isfile() and info.size <= 64 * 2**20:
+                data = path.read_bytes()
+                info.size = len(data)
+                tar.addfile(info, io.BytesIO(data))
+            elif info.isfile():
+                with path.open("rb") as f:
+                    tar.addfile(info, f)
+            else:
+                tar.addfile(info)
+        except FileNotFoundError:
+            pass  # deleted while we were walking (lock / shm / temp files)
 
 
     with tarfile.open(tmp / "opt-data.tar.gz", "w:gz") as tar:
-        tar.add(SRC, arcname="opt-data", filter=tar_filter)
+        add_entry(tar, "")
+        for dirpath, dirnames, filenames in os.walk(SRC):
+            rel_dir = Path(dirpath).relative_to(SRC).as_posix()
+            dirnames[:] = sorted(d for d in dirnames if not skipped(rel_of(rel_dir, d)))
+            for d in dirnames:
+                add_entry(tar, rel_of(rel_dir, d))
+            for name in sorted(filenames):
+                rel = rel_of(rel_dir, name)
+                if (
+                    rel in SKIP_FILES
+                    or rel.endswith(SKIP_SUFFIXES)
+                    or rel.endswith(DB_SUFFIXES)
+                ):
+                    continue
+                add_entry(tar, rel)
 
     final = ROOT / day
     shutil.rmtree(final, ignore_errors=True)
