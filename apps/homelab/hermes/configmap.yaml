@@ -1,6 +1,7 @@
-# First-boot seed for /opt/data/config.yaml. Only copied when no config exists;
-# afterwards Hermes owns the live file (it migrates/edits it), so change the
-# running config with `hermes config set` via kubectl exec.
+# First-boot seeds for /opt/data/config.yaml and /opt/data/honcho.json. Only copied
+# when the file doesn't exist yet; afterwards Hermes owns the live files (it
+# migrates/edits them), so change running config with `hermes config set` /
+# `hermes honcho ...` via kubectl exec.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,3 +17,30 @@ data:
 
     agent:
       disabled_toolsets: [browser] # keeps the pod small (no Chromium / shm)
+
+    memory:
+      provider: honcho # self-hosted Honcho in this namespace, see honcho.json
+
+  # Honcho memory settings. Connection comes from env: HONCHO_BASE_URL (deployment)
+  # and HONCHO_API_KEY (SOPS secret hermes-honcho, a JWT scoped to workspace "hermes").
+  # Cadence/depth/level are kept low: every dialectic call is a Gemini request.
+  honcho.json: |
+    {
+      "workspace": "hermes",
+      "peerName": "niels",
+      "pinUserPeer": true,
+      "hosts": {
+        "hermes": {
+          "enabled": true,
+          "aiPeer": "hermes",
+          "recallMode": "hybrid",
+          "writeFrequency": "async",
+          "saveMessages": true,
+          "contextCadence": 2,
+          "dialecticCadence": 3,
+          "dialecticDepth": 1,
+          "dialecticReasoningLevel": "low",
+          "reasoningLevelCap": "low"
+        }
+      }
+    }
