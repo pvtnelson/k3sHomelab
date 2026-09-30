@@ -1,0 +1,46 @@
+# Honcho deriver: background worker that turns conversations into memory (LLM calls).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: honcho-deriver
+  labels:
+    app.kubernetes.io/name: honcho-deriver
+    app.kubernetes.io/part-of: honcho
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: honcho-deriver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: honcho-deriver
+        app.kubernetes.io/part-of: honcho
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100 # image's built-in `app` user
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: deriver
+          image: ghcr.io/plastic-labs/honcho:v3.2.1
+          command: ["/app/.venv/bin/python", "-m", "src.deriver"]
+          envFrom:
+            - configMapRef:
+                name: honcho-config
+            - secretRef:
+                name: honcho-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 256Mi
+            limits:
+              memory: 768Mi

@@ -1,0 +1,11 @@
+# Postgres data stays on local-path: never put a database on NFS.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes-postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

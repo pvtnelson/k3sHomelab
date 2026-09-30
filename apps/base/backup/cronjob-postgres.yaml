@@ -1,0 +1,70 @@
+# Nightly pg_dump of the shared Postgres (honcho + multica) to the NAS.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hermes-backup-postgres
+  labels:
+    app.kubernetes.io/name: hermes-backup-postgres
+spec:
+  schedule: "15 3 * * *"
+  timeZone: Europe/Amsterdam
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: hermes-backup-postgres
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10000 # same owner as the other hermes files on the NAS
+            runAsGroup: 10000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: pg-dump
+              image: pgvector/pgvector:pg17 # same major version as the server
+              command: ["sh", "/scripts/backup-postgres.sh"]
+              env:
+                - name: KEEP
+                  value: "7"
+                - name: HOME
+                  value: /tmp
+                - name: PGHOST
+                  value: hermes-postgres
+                - name: PGUSER
+                  value: postgres
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secrets
+                      key: POSTGRES_PASSWORD
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 512Mi
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+                - name: scripts
+                  mountPath: /scripts
+                  readOnly: true
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: hermes-backups-pvc # provided by the overlay (NFS)
+            - name: scripts
+              configMap:
+                name: backup-scripts

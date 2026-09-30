@@ -6,3 +6,7 @@ resources:
   - homepage
   - website
   - hermes
+  - postgres # shared by honcho + multica, in the hermes namespace
+  - honcho
+  - multica
+  - backup # nightly hermes/postgres backups to the NAS

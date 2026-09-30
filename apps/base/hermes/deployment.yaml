@@ -57,6 +57,24 @@ spec:
                 curl -fsSL https://claude.ai/install.sh | bash \
                   || echo "[bootstrap] WARNING: Claude Code install failed; continuing"
               fi
+              # Multica CLI (agent daemon), pinned + checksum-verified, on the PVC too.
+              # Bump both values together when upgrading the Multica server.
+              MULTICA_VERSION=0.6.0
+              MULTICA_SHA256=7884e3e6c678ac485caf20bce4cc98353e92c6f586ec8df3df3febcb7c8e9e5b
+              if ! /opt/data/.local/bin/multica version 2>/dev/null | grep -q "multica ${MULTICA_VERSION} "; then
+                (
+                  set -e
+                  tmp=$(mktemp -d)
+                  cd "$tmp"
+                  curl -fsSL -o multica.tgz \
+                    "https://github.com/multica-ai/multica/releases/download/v${MULTICA_VERSION}/multica-cli-${MULTICA_VERSION}-linux-amd64.tar.gz"
+                  echo "${MULTICA_SHA256}  multica.tgz" | sha256sum -c -
+                  tar -xzf multica.tgz multica
+                  mkdir -p /opt/data/.local/bin
+                  install -m 0755 multica /opt/data/.local/bin/multica
+                  rm -rf "$tmp"
+                ) || echo "[bootstrap] WARNING: Multica CLI install failed; continuing"
+              fi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -158,6 +176,63 @@ spec:
               memory: 384Mi
             limits:
               memory: 1536Mi # 512Mi got OOMKilled during dashboard chat sessions
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: notes
+              mountPath: /workspace/notes
+
+        # Multica agent daemon: picks up tasks from the Multica board and runs them with
+        # the agent CLIs in this image/PVC (`claude`, `hermes`). Needs a one-time
+        # `multica login --token` (token saved in /opt/data/.multica); until then the
+        # daemon exits and this loop retries instead of crash-looping the pod.
+        - name: multica-daemon
+          image: nousresearch/hermes-agent:v2026.9.24
+          command:
+            - /bin/sh
+            - -c
+            - |
+              trap 'kill -TERM "$pid" 2>/dev/null; wait "$pid"; exit 0' TERM INT
+              while true; do
+                multica daemon start --foreground --no-auto-update &
+                pid=$!
+                wait "$pid" || true
+                echo "[multica-daemon] daemon exited (not logged in yet?); retrying in 60s"
+                sleep 60 &
+                pid=$!
+                wait "$pid"
+              done
+          envFrom:
+            - secretRef:
+                name: hermes-env
+                optional: true # CLAUDE_CODE_OAUTH_TOKEN for Claude Code runs
+          env:
+            - name: MULTICA_SERVER_URL
+              value: http://multica-backend:8080
+            - name: MULTICA_APP_URL
+              value: https://multica.vandesteeg.dev
+            - name: MULTICA_AGENT_RUNTIME_NAME
+              value: homelab-hermes
+            - name: MULTICA_WORKSPACES_ROOT
+              value: /opt/data/multica-workspaces
+            # Hermes runs started by Multica use the same workspace as the gateway.
+            - name: TERMINAL_CWD
+              value: /workspace/notes
+            - name: OBSIDIAN_VAULT_PATH
+              value: /workspace/notes
+            - name: HERMES_WRITE_SAFE_ROOT
+              value: /opt/data:/workspace/notes
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 128Mi
+            limits:
+              memory: 2Gi # agent runs (claude -p / hermes) happen in this container
           volumeMounts:
             - name: data
               mountPath: /opt/data

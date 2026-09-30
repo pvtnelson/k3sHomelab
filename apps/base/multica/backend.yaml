@@ -1,0 +1,75 @@
+# Multica API + WebSocket server. entrypoint.sh runs DB migrations, then the server.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multica-backend
+  labels:
+    app.kubernetes.io/name: multica-backend
+    app.kubernetes.io/part-of: multica
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  strategy:
+    type: Recreate # RWO uploads volume
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: multica-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: multica-backend
+        app.kubernetes.io/part-of: multica
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001 # image runs as root by default; nothing in /app needs writing
+        runAsGroup: 10001
+        fsGroup: 10001 # uploads volume
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: ghcr.io/multica-ai/multica-backend:v0.6.0
+          envFrom:
+            - configMapRef:
+                name: multica-config
+            - secretRef:
+                name: multica-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/data/uploads
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: multica-uploads-pvc

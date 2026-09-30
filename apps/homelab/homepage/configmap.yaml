@@ -41,6 +41,10 @@ data:
             icon: https://hermes-agent.nousresearch.com/favicon.ico
             href: https://hermes.vandesteeg.dev
             description: AI agent
+        - Multica:
+            icon: mdi-view-dashboard-outline
+            href: https://multica.vandesteeg.dev
+            description: Agent task board
     - Infrastructure:
         - Grafana:
             icon: grafana.png

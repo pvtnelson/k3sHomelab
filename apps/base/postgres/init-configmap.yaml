@@ -1,0 +1,25 @@
+# Runs once, when the image initialises an empty PGDATA. It never runs again on an
+# existing volume: later changes must be applied by hand with psql.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hermes-postgres-init
+data:
+  10-init.sh: |
+    #!/bin/sh
+    set -eu
+    psql -v ON_ERROR_STOP=1 --username postgres \
+      -v honcho_pw="$HONCHO_DB_PASSWORD" -v multica_pw="$MULTICA_DB_PASSWORD" <<'SQL'
+    CREATE ROLE honcho LOGIN PASSWORD :'honcho_pw';
+    CREATE ROLE multica LOGIN PASSWORD :'multica_pw';
+    CREATE DATABASE honcho OWNER honcho;
+    CREATE DATABASE multica OWNER multica;
+    -- Each app may only connect to its own database.
+    REVOKE CONNECT ON DATABASE honcho FROM PUBLIC;
+    REVOKE CONNECT ON DATABASE multica FROM PUBLIC;
+    \connect honcho
+    CREATE EXTENSION IF NOT EXISTS vector;
+    \connect multica
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    SQL

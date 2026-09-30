@@ -1,0 +1,44 @@
+# Non-secret Honcho settings (env vars, see honcho.dev/docs/v3/contributing/configuration).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: honcho-config
+data:
+  CACHE_ENABLED: "true"
+  CACHE_URL: redis://honcho-redis:6379/0
+  AUTH_USE_AUTH: "true" # clients (Hermes) need a JWT from scripts/generate_jwt.py
+  SENTRY_ENABLED: "false"
+  TELEMETRY_ENABLED: "false"
+  DREAM_ENABLED: "false" # idle-time LLM processing; off to keep costs down
+  HONCHO_CONFIG_TOML_DISABLED: "1"
+
+  # --- Models: cheapest generally-available Gemini for every task ---
+  # gemini-3.1-flash-lite ($0.25 in / $1.50 out per 1M tokens, Sep 2026). gemini-2.5-flash-lite is
+  # cheaper ($0.10 / $0.40) but Google only serves the 2.5 models to accounts that already used them.
+  # Every LLM feature must be set here: anything left unset falls back to OpenAI (gpt-5.4-mini).
+  DERIVER_MODEL_CONFIG__TRANSPORT: gemini
+  DERIVER_MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  SUMMARY_MODEL_CONFIG__TRANSPORT: gemini
+  SUMMARY_MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__TRANSPORT: gemini
+  DIALECTIC_LEVELS__minimal__MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__TRANSPORT: gemini
+  DIALECTIC_LEVELS__low__MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__TRANSPORT: gemini
+  DIALECTIC_LEVELS__medium__MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__TRANSPORT: gemini
+  DIALECTIC_LEVELS__high__MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__TRANSPORT: gemini
+  DIALECTIC_LEVELS__max__MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  # Dream is disabled above; set anyway so nothing points at OpenAI.
+  DREAM_DEDUCTION_MODEL_CONFIG__TRANSPORT: gemini
+  DREAM_DEDUCTION_MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+  DREAM_INDUCTION_MODEL_CONFIG__TRANSPORT: gemini
+  DREAM_INDUCTION_MODEL_CONFIG__MODEL: gemini-3.1-flash-lite
+
+  # Embeddings. The vector size is fixed at the first start of honcho-api: changing it
+  # later means wiping the honcho database. gemini-embedding-001 supports 1536 via
+  # output_dimensionality (Honcho sends it).
+  EMBEDDING_MODEL_CONFIG__TRANSPORT: gemini
+  EMBEDDING_MODEL_CONFIG__MODEL: gemini-embedding-001
+  EMBEDDING_VECTOR_DIMENSIONS: "1536"

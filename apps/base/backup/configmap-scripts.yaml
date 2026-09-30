@@ -1,0 +1,99 @@
+# Nightly backup scripts. Each run writes to <root>/<YYYY-MM-DD>/ via a temp dir
+# (so a failed run never leaves a half-written copy) and keeps the newest KEEP runs.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts
+data:
+  backup-postgres.sh: |
+    #!/bin/sh
+    set -eu
+    root=/backups/postgres
+    day=$(date +%F)
+    tmp="$root/.$day.tmp"
+    rm -rf "$tmp"
+    mkdir -p "$tmp"
+    # Roles without password hashes: after a restore, set them again from postgres-secrets.
+    pg_dumpall --globals-only --no-role-passwords > "$tmp/globals.sql"
+    for db in honcho multica; do
+      pg_dump --format=custom --dbname="$db" --file="$tmp/$db.dump"
+    done
+    rm -rf "${root:?}/$day"
+    mv "$tmp" "$root/$day"
+    ls -1d "$root"/20??-??-?? | sort | head -n -"$KEEP" | xargs -r rm -rf --
+    echo "[backup] postgres -> $root/$day"; ls -la "$root/$day"
+
+  backup-data.py: |
+    """Back up Hermes' /opt/data: consistent SQLite copies + a tar of everything else.
+
+    Credentials (.env, auth.json, Multica token) and reinstallable/caches are skipped,
+    so no tokens end up unencrypted on the NAS.
+    """
+    import datetime
+    import os
+    import shutil
+    import sqlite3
+    import tarfile
+    from pathlib import Path
+
+    SRC = Path("/opt/data")
+    ROOT = Path("/backups/data")
+    KEEP = int(os.environ["KEEP"])
+
+    SKIP_DIRS = {
+        "logs", "cache", "audio_cache", "image_cache", ".cache", "lazy-packages",
+        ".local/bin", ".local/share/claude", "multica-workspaces",
+    }
+    SKIP_FILES = {".env", "auth.json", ".multica/config.json", ".claude/.credentials.json"}
+    SKIP_SUFFIXES = (".lock", ".sock", ".pid", "-wal", "-shm")
+    DB_SUFFIXES = (".db", ".sqlite", ".sqlite3")
+
+    day = datetime.date.today().isoformat()
+    tmp = ROOT / f".{day}.tmp"
+    shutil.rmtree(tmp, ignore_errors=True)
+    (tmp / "sqlite").mkdir(parents=True)
+
+
+    def skipped(rel: str) -> bool:
+        return any(rel == d or rel.startswith(d + "/") for d in SKIP_DIRS)
+
+
+    # 1. SQLite: the backup API gives a consistent copy while Hermes keeps writing.
+    for path in SRC.rglob("*"):
+        rel = path.relative_to(SRC).as_posix()
+        if path.is_file() and path.name.endswith(DB_SUFFIXES) and not skipped(rel):
+            dest = tmp / "sqlite" / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            src = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=30)
+            dst = sqlite3.connect(dest)
+            src.backup(dst)
+            dst.close()
+            src.close()
+            print(f"[backup] sqlite {rel}")
+
+
+    # 2. Everything else, minus live databases, caches, sockets and credentials.
+    def tar_filter(info: tarfile.TarInfo):
+        rel = info.name.removeprefix("opt-data").lstrip("/")
+        if rel and (
+            skipped(rel)
+            or rel in SKIP_FILES
+            or rel.endswith(SKIP_SUFFIXES)
+            or rel.endswith(DB_SUFFIXES)
+            or not (info.isfile() or info.isdir() or info.issym())
+        ):
+            return None
+        return info
+
+
+    with tarfile.open(tmp / "opt-data.tar.gz", "w:gz") as tar:
+        tar.add(SRC, arcname="opt-data", filter=tar_filter)
+
+    final = ROOT / day
+    shutil.rmtree(final, ignore_errors=True)
+    tmp.rename(final)
+
+    runs = sorted(p for p in ROOT.iterdir() if p.is_dir() and p.name[:2] == "20")
+    for old in runs[:-KEEP]:
+        shutil.rmtree(old)
+    print(f"[backup] data -> {final}")
