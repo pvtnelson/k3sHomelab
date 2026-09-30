@@ -6,4 +6,4 @@ resources:
   - nfs-notes.yaml
   - configmap.yaml
   - ../shared/admin-secret.yaml # dashboard login
-  # - hermes-env-secret.yaml     # add later: model API keys, Telegram
+  - hermes-env-secret.yaml # SOPS: CLAUDE_CODE_OAUTH_TOKEN (+ later: model API keys, Telegram)
