@@ -51,6 +51,12 @@ spec:
               # and fails for us; run it directly as the hermes user instead.
               /opt/hermes/.venv/bin/python /opt/hermes/scripts/docker_config_migrate.py \
                 || echo "[bootstrap] WARNING: config migration failed; continuing"
+              # Honcho memory plugin needs honcho-ai. Install it through Hermes' own
+              # allowlisted lazy installer into /opt/data/lazy-packages (not in backups),
+              # so a fresh or restored volume doesn't silently run without memory.
+              (cd /opt/hermes && /opt/hermes/.venv/bin/python -c \
+                "from tools.lazy_deps import ensure; ensure('memory.honcho')") \
+                || echo "[bootstrap] WARNING: honcho-ai install failed; continuing"
               # Claude Code (native build) for the bundled claude-code skill. HOME is
               # /opt/data, so it lands on the PVC in ~/.local/bin (already on the image
               # PATH) and self-updates there. Auth: CLAUDE_CODE_OAUTH_TOKEN in hermes-env.
