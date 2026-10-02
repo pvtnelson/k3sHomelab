@@ -5,3 +5,4 @@ resources:
   - deployment.yaml
   - service.yaml
   - ingress.yaml
+  - restart-cronjob.yaml # nightly restart to pull the latest image
