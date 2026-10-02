@@ -16,7 +16,7 @@ spec:
     - hard
   nfs:
     server: 10.10.10.10
-    path: /volume1/notes/mysecondbrain
+    path: /volume1/notes/mySecondBrain
     readOnly: true
 ---
 apiVersion: v1
