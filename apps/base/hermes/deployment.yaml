@@ -133,6 +133,9 @@ spec:
               mountPath: /opt/data
             - name: notes
               mountPath: /workspace/notes
+            - name: secondbrain
+              mountPath: /workspace/secondbrain
+              readOnly: true
 
         - name: dashboard
           image: nousresearch/hermes-agent:v2026.9.24
@@ -198,6 +201,9 @@ spec:
               mountPath: /opt/data
             - name: notes
               mountPath: /workspace/notes
+            - name: secondbrain
+              mountPath: /workspace/secondbrain
+              readOnly: true
 
         # Multica agent daemon: picks up tasks from the Multica board and runs them with
         # the agent CLIs in this image/PVC (`claude`, `hermes`). Needs a one-time
@@ -260,6 +266,9 @@ spec:
               mountPath: /opt/data
             - name: notes
               mountPath: /workspace/notes
+            - name: secondbrain
+              mountPath: /workspace/secondbrain
+              readOnly: true
 
       volumes:
         - name: data
@@ -268,6 +277,10 @@ spec:
         - name: notes
           persistentVolumeClaim:
             claimName: hermes-notes-pvc # provided by the overlay (NFS)
+        - name: secondbrain
+          persistentVolumeClaim:
+            claimName: hermes-secondbrain-pvc # provided by the overlay (NFS, read-only)
+            readOnly: true
         - name: seed-config
           configMap:
             name: hermes-seed-config

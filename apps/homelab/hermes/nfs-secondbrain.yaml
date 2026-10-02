@@ -1,0 +1,33 @@
+# "Second brain" notes on the Asustor NAS, mounted read-only at /workspace/secondbrain.
+# Read-only at every layer (PV, pod volume, mounts) so the agent can never change it.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hermes-secondbrain-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain # never touch the NAS data on delete
+  storageClassName: ""
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+  nfs:
+    server: 10.10.10.10
+    path: /volume1/notes/mysecondbrain
+    readOnly: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes-secondbrain-pvc
+spec:
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: ""
+  volumeName: hermes-secondbrain-pv
+  resources:
+    requests:
+      storage: 10Gi
