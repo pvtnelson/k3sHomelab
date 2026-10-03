@@ -133,8 +133,8 @@ spec:
               mountPath: /opt/data
             - name: notes
               mountPath: /workspace/notes
-            - name: secondbrain
-              mountPath: /workspace/secondbrain
+            - name: homedir
+              mountPath: /workspace/homedir
               readOnly: true
 
         - name: dashboard
@@ -201,8 +201,8 @@ spec:
               mountPath: /opt/data
             - name: notes
               mountPath: /workspace/notes
-            - name: secondbrain
-              mountPath: /workspace/secondbrain
+            - name: homedir
+              mountPath: /workspace/homedir
               readOnly: true
 
         # Multica agent daemon: picks up tasks from the Multica board and runs them with
@@ -266,8 +266,8 @@ spec:
               mountPath: /opt/data
             - name: notes
               mountPath: /workspace/notes
-            - name: secondbrain
-              mountPath: /workspace/secondbrain
+            - name: homedir
+              mountPath: /workspace/homedir
               readOnly: true
 
       volumes:
@@ -277,9 +277,9 @@ spec:
         - name: notes
           persistentVolumeClaim:
             claimName: hermes-notes-pvc # provided by the overlay (NFS)
-        - name: secondbrain
+        - name: homedir
           persistentVolumeClaim:
-            claimName: hermes-secondbrain-pvc # provided by the overlay (NFS, read-only)
+            claimName: hermes-homedir-pvc # provided by the overlay (NFS, read-only)
             readOnly: true
         - name: seed-config
           configMap:
