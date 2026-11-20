@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: cloudflared
-          image: cloudflare/cloudflared:latest
+          image: cloudflare/cloudflared:2026.11.1
           args:
             - tunnel
             - --config
@@ -24,7 +24,7 @@ spec:
             httpGet:
               path: /ready
               port: 2000
-            failureThreshold: 1
+            failureThreshold: 5
             initialDelaySeconds: 10
             periodSeconds: 10
           volumeMounts:
