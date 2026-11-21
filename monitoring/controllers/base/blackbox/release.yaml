@@ -1,0 +1,35 @@
+# Blackbox exporter: checks from inside the cluster that a URL answers, and how long its
+# certificate has left. Used for every internal *.lab name (see probes.yaml).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: blackbox-exporter
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: prometheus-blackbox-exporter
+      version: "11.21.0"
+      sourceRef:
+        kind: HelmRepository
+        name: kube-prometheus-stack # the prometheus-community repository
+        namespace: monitoring
+      interval: 12h
+  values:
+    fullnameOverride: blackbox-exporter
+    config:
+      modules:
+        http_2xx:
+          prober: http
+          timeout: 10s
+          http:
+            preferred_ip_protocol: ip4
+            follow_redirects: true
+            valid_status_codes: [] # any 2xx after redirects
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
