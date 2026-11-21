@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - kube-prometheus-stack
   - blackbox # probes on the internal *.lab names (S07)
+  - exporters # Proxmox, Pi-hole, NAS and network (SNMP), Home Assistant (S07)

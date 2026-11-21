@@ -1,0 +1,65 @@
+# Proxmox VE exporter: reads the three Proxmox hosts and their guests through the API
+# with a read-only token (role PVEAuditor). The token lives in Secret pve-exporter,
+# created by hand, never in git.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: pve-exporter }
+  template:
+    metadata:
+      labels: { app: pve-exporter }
+    spec:
+      containers:
+        - name: pve-exporter
+          image: prompve/prometheus-pve-exporter:3.11.0
+          envFrom:
+            - secretRef: { name: pve-exporter } # PVE_USER, PVE_TOKEN_NAME, PVE_TOKEN_VALUE
+          env:
+            - name: PVE_VERIFY_SSL
+              value: "false" # the hosts use their own self-signed certificates
+          ports:
+            - { name: metrics, containerPort: 9221 }
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+spec:
+  selector: { app: pve-exporter }
+  ports:
+    - { name: metrics, port: 9221, targetPort: metrics }
+---
+# One scrape per host; the exporter asks that host's API.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: proxmox
+  namespace: monitoring
+spec:
+  metricsPath: /pve
+  params:
+    module: [default]
+    cluster: ["1"]
+    node: ["1"]
+  staticConfigs:
+    - targets: [pve1.home.arpa, pve2.home.arpa, pve3.home.arpa]
+      labels: { group: proxmox }
+  relabelings:
+    - sourceLabels: [__address__]
+      targetLabel: __param_target
+    - sourceLabels: [__param_target]
+      targetLabel: instance
+    - targetLabel: __address__
+      replacement: pve-exporter.monitoring.svc:9221
