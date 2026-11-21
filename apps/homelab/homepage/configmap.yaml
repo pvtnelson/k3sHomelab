@@ -35,7 +35,7 @@ data:
             description: Bookmark manager
         - Audiobookshelf:
             icon: audiobookshelf.png
-            href: https://audiobookshelf.vandesteeg.dev
+            href: https://audiobookshelf.lab.vandesteeg.dev
             description: Audiobook library
         - Hermes:
             icon: https://hermes-agent.nousresearch.com/favicon.ico
@@ -48,7 +48,7 @@ data:
     - Infrastructure:
         - Grafana:
             icon: grafana.png
-            href: https://grafana.vandesteeg.dev
+            href: https://grafana.lab.vandesteeg.dev
             description: Monitoring dashboards
   widgets.yaml: |
     - kubernetes:

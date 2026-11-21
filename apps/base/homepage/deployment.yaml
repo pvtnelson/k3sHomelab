@@ -54,7 +54,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: HOMEPAGE_ALLOWED_HOSTS
-              value: "$(MY_POD_IP):3000,home.vandesteeg.dev"
+              value: "$(MY_POD_IP):3000,home.lab.vandesteeg.dev"
           ports:
             - name: http
               containerPort: 3000
