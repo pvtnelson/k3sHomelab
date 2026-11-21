@@ -27,6 +27,23 @@ spec:
             preferred_ip_protocol: ip4
             follow_redirects: true
             valid_status_codes: [] # any 2xx after redirects
+        icmp:
+          prober: icmp
+          timeout: 5s
+          icmp:
+            preferred_ip_protocol: ip4
+        dns_pihole:
+          prober: dns
+          timeout: 5s
+          dns:
+            query_name: vandesteeg.dev
+            query_type: A
+            valid_rcodes: [NOERROR]
+    # Unprivileged ping (no NET_RAW, the container stays non-root): allow ICMP echo sockets.
+    podSecurityContext:
+      sysctls:
+        - name: net.ipv4.ping_group_range
+          value: "0 2147483647"
     resources:
       requests:
         cpu: 10m

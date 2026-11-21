@@ -1,0 +1,50 @@
+# Up/down for every device outside the cluster, with no logins: ping for the NAS and the
+# network gear, a DNS question to Pi-hole, the web page for Home Assistant.
+# Deeper metrics only where a question needs them (Proxmox: pve-exporter.yaml).
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: devices-ping
+  namespace: monitoring
+spec:
+  jobName: devices
+  interval: 60s
+  module: icmp
+  prober:
+    url: blackbox-exporter.monitoring.svc:9115
+  targets:
+    staticConfig:
+      static: [nas.home.arpa, router.home.arpa, switch.home.arpa, ap.home.arpa]
+      labels: { group: devices }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: pihole-dns
+  namespace: monitoring
+spec:
+  jobName: devices
+  interval: 60s
+  module: dns_pihole
+  prober:
+    url: blackbox-exporter.monitoring.svc:9115
+  targets:
+    staticConfig:
+      static: ["dns.home.arpa:53"]
+      labels: { group: devices }
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: home-assistant
+  namespace: monitoring
+spec:
+  jobName: devices
+  interval: 60s
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.monitoring.svc:9115
+  targets:
+    staticConfig:
+      static: ["http://homeassistant.home.arpa:8123"]
+      labels: { group: devices }
