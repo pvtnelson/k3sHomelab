@@ -44,6 +44,16 @@ spec:
           - hosts:
               - grafana.lab.vandesteeg.dev
     prometheus:
+      # Prometheus's own UI and API on an internal lab name (read-only by nature; LAN and Tailscale only).
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        hosts:
+          - prometheus.lab.vandesteeg.dev
+        paths: ["/"]
+        tls: # served by the lab wildcard certificate (Traefik default TLSStore)
+          - hosts:
+              - prometheus.lab.vandesteeg.dev
       prometheusSpec:
         # Keep history across restarts (it lived in an emptyDir before) and cap it.
         retention: 30d

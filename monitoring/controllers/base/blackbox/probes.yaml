@@ -19,5 +19,6 @@ spec:
         - https://home.lab.vandesteeg.dev
         - https://audiobookshelf.lab.vandesteeg.dev
         - https://grafana.lab.vandesteeg.dev
+        - https://prometheus.lab.vandesteeg.dev
       labels:
         group: lab-names
