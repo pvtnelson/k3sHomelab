@@ -1,0 +1,15 @@
+# Let Traefik route to services outside the cluster (ExternalName Services),
+# so machines like the NAS get lab names by their local DNS name, never an IP.
+# Merged into k3s's bundled Traefik chart; Traefik restarts once on apply.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    providers:
+      kubernetesIngress:
+        allowExternalNameServices: true
+      kubernetesCRD:
+        allowExternalNameServices: true
