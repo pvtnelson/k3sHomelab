@@ -1,0 +1,23 @@
+# One probe for every internal *.lab name. A new lab service adds one line here.
+# Results: probe_success (1 = answers 2xx over HTTPS) and probe_ssl_earliest_cert_expiry.
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: lab-names
+  namespace: monitoring
+spec:
+  jobName: lab-names
+  interval: 60s
+  module: http_2xx
+  prober:
+    url: blackbox-exporter.monitoring.svc:9115
+  targets:
+    staticConfig:
+      static:
+        - https://pulse.lab.vandesteeg.dev
+        - https://git.lab.vandesteeg.dev
+        - https://home.lab.vandesteeg.dev
+        - https://audiobookshelf.lab.vandesteeg.dev
+        - https://grafana.lab.vandesteeg.dev
+      labels:
+        group: lab-names
