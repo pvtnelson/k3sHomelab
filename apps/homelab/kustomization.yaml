@@ -10,3 +10,4 @@ resources:
   - honcho
   - multica
   - backup # nightly hermes/postgres backups to the NAS
+  - lab-routes # internal *.lab names for services outside the cluster
