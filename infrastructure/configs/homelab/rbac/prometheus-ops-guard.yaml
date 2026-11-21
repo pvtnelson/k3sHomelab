@@ -31,7 +31,7 @@ spec:
       expression: request.userInfo.username == 'system:serviceaccount:kube-system:prometheus-ops'
   variables:
     - name: workload
-      expression: request.resource.group == 'apps' && request.subResource == ''
+      expression: request.resource.group == 'apps' && (!has(request.subResource) || request.subResource == '')
     - name: kind
       expression: request.kind.kind
   validations:
