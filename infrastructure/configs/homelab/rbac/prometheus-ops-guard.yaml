@@ -1,0 +1,113 @@
+# Guard for the prometheus-ops identity (security audit N1, 2026-11-21).
+# RBAC cannot say "patch only this field", so `patch` on workloads, Flux objects and nodes
+# would let this identity rewrite a pod (privileged, hostPath, other image) or point Flux at
+# another repo. This policy lets it change only what its runbooks change:
+#   workloads: the restart annotation and replicas (rollout restart, scale)
+#   Flux:      suspend and the reconcile annotation
+#   nodes:     unschedulable (cordon)
+# Everything else from this identity is denied. Other users and Flux itself are not affected.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: prometheus-ops-guard
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["*"]
+        operations: ["UPDATE"]
+        resources: ["deployments", "statefulsets", "daemonsets", "deployments/scale", "statefulsets/scale"]
+      - apiGroups: ["source.toolkit.fluxcd.io", "kustomize.toolkit.fluxcd.io", "helm.toolkit.fluxcd.io"]
+        apiVersions: ["*"]
+        operations: ["UPDATE"]
+        resources: ["*"]
+      - apiGroups: [""]
+        apiVersions: ["*"]
+        operations: ["UPDATE"]
+        resources: ["nodes"]
+  matchConditions:
+    - name: only-prometheus-ops
+      expression: request.userInfo.username == 'system:serviceaccount:kube-system:prometheus-ops'
+  variables:
+    - name: workload
+      expression: request.resource.group == 'apps' && request.subResource == ''
+    - name: kind
+      expression: request.kind.kind
+  validations:
+    # Workloads: the pod template's spec and labels, the selector and the update strategy stay as they are.
+    - expression: >-
+        !variables.workload || (
+          object.spec.template.spec == oldObject.spec.template.spec &&
+          object.spec.template.metadata.?labels == oldObject.spec.template.metadata.?labels &&
+          object.spec.selector == oldObject.spec.selector &&
+          object.spec.?strategy == oldObject.spec.?strategy &&
+          object.spec.?updateStrategy == oldObject.spec.?updateStrategy &&
+          object.spec.?volumeClaimTemplates == oldObject.spec.?volumeClaimTemplates &&
+          object.spec.?minReadySeconds == oldObject.spec.?minReadySeconds
+        )
+      message: "prometheus-ops may only restart or scale a workload, not change its pod template"
+    # Flux sources: where they fetch from stays as it is.
+    - expression: >-
+        !(variables.kind in ['GitRepository', 'HelmRepository', 'OCIRepository', 'Bucket']) || (
+          object.spec.?url == oldObject.spec.?url &&
+          object.spec.?ref == oldObject.spec.?ref &&
+          object.spec.?secretRef == oldObject.spec.?secretRef &&
+          object.spec.?certSecretRef == oldObject.spec.?certSecretRef &&
+          object.spec.?proxySecretRef == oldObject.spec.?proxySecretRef &&
+          object.spec.?include == oldObject.spec.?include &&
+          object.spec.?verify == oldObject.spec.?verify &&
+          object.spec.?ignore == oldObject.spec.?ignore &&
+          object.spec.?bucketName == oldObject.spec.?bucketName &&
+          object.spec.?endpoint == oldObject.spec.?endpoint
+        )
+      message: "prometheus-ops may only suspend, resume or reconcile a Flux source, not change where it fetches from"
+    # Flux Kustomizations: what they apply, and how, stays as it is.
+    - expression: >-
+        variables.kind != 'Kustomization' || (
+          object.spec.?sourceRef == oldObject.spec.?sourceRef &&
+          object.spec.?path == oldObject.spec.?path &&
+          object.spec.?prune == oldObject.spec.?prune &&
+          object.spec.?targetNamespace == oldObject.spec.?targetNamespace &&
+          object.spec.?serviceAccountName == oldObject.spec.?serviceAccountName &&
+          object.spec.?kubeConfig == oldObject.spec.?kubeConfig &&
+          object.spec.?patches == oldObject.spec.?patches &&
+          object.spec.?images == oldObject.spec.?images &&
+          object.spec.?components == oldObject.spec.?components &&
+          object.spec.?postBuild == oldObject.spec.?postBuild &&
+          object.spec.?decryption == oldObject.spec.?decryption &&
+          object.spec.?dependsOn == oldObject.spec.?dependsOn &&
+          object.spec.?force == oldObject.spec.?force
+        )
+      message: "prometheus-ops may only suspend, resume or reconcile a Kustomization, not change what it applies"
+    # Flux HelmReleases: chart and values stay as they are.
+    - expression: >-
+        variables.kind != 'HelmRelease' || (
+          object.spec.?chart == oldObject.spec.?chart &&
+          object.spec.?chartRef == oldObject.spec.?chartRef &&
+          object.spec.?values == oldObject.spec.?values &&
+          object.spec.?valuesFrom == oldObject.spec.?valuesFrom &&
+          object.spec.?targetNamespace == oldObject.spec.?targetNamespace &&
+          object.spec.?serviceAccountName == oldObject.spec.?serviceAccountName &&
+          object.spec.?kubeConfig == oldObject.spec.?kubeConfig &&
+          object.spec.?postRenderers == oldObject.spec.?postRenderers &&
+          object.spec.?dependsOn == oldObject.spec.?dependsOn
+        )
+      message: "prometheus-ops may only suspend, resume or reconcile a HelmRelease, not change its chart or values"
+    # Nodes: only cordon/uncordon; taints and labels (which steer scheduling) stay as they are.
+    - expression: >-
+        variables.kind != 'Node' || (
+          object.spec.?taints == oldObject.spec.?taints &&
+          object.spec.?podCIDR == oldObject.spec.?podCIDR &&
+          object.spec.?providerID == oldObject.spec.?providerID &&
+          object.metadata.?labels == oldObject.metadata.?labels
+        )
+      message: "prometheus-ops may only cordon or uncordon a node"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: prometheus-ops-guard
+spec:
+  policyName: prometheus-ops-guard
+  validationActions: [Deny]
