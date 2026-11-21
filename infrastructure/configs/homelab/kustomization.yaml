@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - cert-manager
   - rbac # cluster-wide identities (Prometheus / LifeOS)
+  - lab-tls # wildcard certificate for *.lab names (internal only)
