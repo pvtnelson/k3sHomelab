@@ -43,3 +43,22 @@ spec:
         tls: # served by the lab wildcard certificate (Traefik default TLSStore)
           - hosts:
               - grafana.lab.vandesteeg.dev
+    prometheus:
+      prometheusSpec:
+        # Keep history across restarts (it lived in an emptyDir before) and cap it.
+        retention: 30d
+        retentionSize: 15GB
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 20Gi
+        # Pick up ServiceMonitors, PodMonitors, Probes and ScrapeConfigs from every
+        # namespace, not only those labelled for this Helm release (for the homelab exporters).
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        probeSelectorNilUsesHelmValues: false
+        scrapeConfigSelectorNilUsesHelmValues: false
