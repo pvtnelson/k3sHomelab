@@ -1,0 +1,11 @@
+# Traefik serves the wildcard as its default certificate, so a lab service only
+# needs an Ingress with its host under `tls.hosts` and no secret of its own.
+# Existing services keep their own certificates; Traefik picks by name (SNI).
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: kube-system
+spec:
+  defaultCertificate:
+    secretName: lab-wildcard-tls

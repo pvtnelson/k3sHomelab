@@ -1,0 +1,19 @@
+# One wildcard certificate for every internal service name (*.lab.vandesteeg.dev).
+# The names exist only in the local DNS, never in public DNS; the DNS-01 challenge
+# through Cloudflare is what lets Let's Encrypt issue it anyway.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab-wildcard
+  namespace: kube-system
+spec:
+  secretName: lab-wildcard-tls
+  issuerRef:
+    name: letsencrypt-production
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.lab.vandesteeg.dev"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
